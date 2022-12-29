@@ -93,6 +93,8 @@ def get_종목별_일별_거래량(code, max_page=3):
         df['종가'] = df['종가'].astype('float')
         df['전일비'] = df['전일비'].astype('float')
         df['거래량'] = df['거래량'].astype('float')
+        df['기관 - 순매매량'] = df['기관 - 순매매량'].astype(str)
+        df['외국인 - 순매매량'] = df['외국인 - 순매매량'].astype(str)
 
         df['등락률'] = percent_to_float(df['등락률'])
         df['외국인 - 보유율(%)'] = percent_to_float(df['외국인 - 보유율(%)'])
