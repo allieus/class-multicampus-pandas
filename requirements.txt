@@ -1,0 +1,9 @@
+beautifulsoup4
+jupyter
+matplotlib
+pandas
+requests
+seaborn
+tqdm
+xlwings
+
