@@ -2,6 +2,7 @@ import datetime
 import pandas as pd
 import requests
 import time
+from io import StringIO
 import xlwings as xw
 from bs4 import BeautifulSoup
 from urllib.parse import urljoin, urlparse, parse_qs
@@ -29,9 +30,10 @@ def get_국내증시_검색상위(field_id_list=None):
     }
 
     res = requests.get(url, headers=HEADERS, params=params)
-    html = res.text
+    # pandas에서 html 문자열 넘기는 건 deprecated되었고, 파일 객체가 권장됩니다.
+    html_file = StringIO(res.text)
 
-    df = pd.read_html(html, header=0)[1]
+    df = pd.read_html(html_file, header=0)[1]
     df = df.dropna().drop(['순위'], axis="columns").set_index('종목명')
     df['검색비율'] = percent_to_float(df['검색비율'])
     df['등락률'] = percent_to_float(df['등락률'])
@@ -80,21 +82,19 @@ def get_종목별_일별_거래량(code, max_page=3):
         }
         res = requests.get(
             "https://finance.naver.com/item/frgn.nhn", headers=HEADERS, params=params)
-        html = res.text
+        html_file = StringIO(res.text)
 
-        df = pd.read_html(html)[2].dropna(how='all')
+        df = pd.read_html(html_file)[2].dropna(how='all')
         df.columns = [
             '날짜', '종가', '전일비', '등락률', '거래량',
             '기관 - 순매매량', '외국인 - 순매매량', '외국인 - 보유주수', '외국인 - 보유율(%)',
         ]
         df = df.iloc[2:].set_index('날짜')
-        df.index = pd.to_datetime(df.index)
+        df.index = pd.to_datetime(df.index).date
 
         df['종가'] = df['종가'].astype('float')
         df['전일비'] = df['전일비'].astype('float')
         df['거래량'] = df['거래량'].astype('float')
-        df['기관 - 순매매량'] = df['기관 - 순매매량'].astype(str)
-        df['외국인 - 순매매량'] = df['외국인 - 순매매량'].astype(str)
 
         df['등락률'] = percent_to_float(df['등락률'])
         df['외국인 - 보유율(%)'] = percent_to_float(df['외국인 - 보유율(%)'])
@@ -137,8 +137,8 @@ def get_시간별_시세(code, url, max_page=100):
         }
 
         res = requests.get(url, headers=HEADERS, params=params)
-        html = res.text
-        page_df = pd.read_html(html, header=0)[0].dropna()
+        html_file = StringIO(res.text)
+        page_df = pd.read_html(html_file, header=0)[0].dropna()
 
         def apply_fn(t):
             hour, minute = map(int, t.split(':'))
@@ -172,11 +172,11 @@ def get_kospi200(code, max_page=1):
         res = requests.get(
             "https://finance.naver.com/sise/sise_index_day.nhn", headers=HEADERS, params=params)
         res.raise_for_status()
-        html = res.text
+        html_file = StringIO(res.text)
 
-        current_df = pd.read_html(html, header=0)[0]
+        current_df = pd.read_html(html_file, header=0)[0]
         current_df = current_df.dropna().set_index('날짜')
-        current_df.index = pd.to_datetime(current_df.index)
+        current_df.index = pd.to_datetime(current_df.index).date
 
         if last_df is not None:
             is_over_page = last_df.index.equals(current_df.index)
