@@ -2,6 +2,7 @@ import datetime
 import pandas as pd
 import requests
 import time
+import re
 from io import StringIO
 import xlwings as xw
 from bs4 import BeautifulSoup
@@ -92,6 +93,22 @@ def get_종목별_일별_거래량(code, max_page=3):
         df = df.iloc[2:].set_index('날짜')
         df.index = pd.to_datetime(df.index).date
 
+        # <전일비> 레이블에 숫자 외에 상승/하락 등의 문자열이 있어서, 이에 대한 전처리
+        #  - "상승  2,500" 문자열을 "+2500"으로 변환
+        #  - "하락  1,500" 문자열을 "-1500"으로 변환
+        def convert_전일비(x):
+            if isinstance(x, str):
+                if '상' in x:
+                    return '+' + x.split()[-1].replace(',', '')
+                elif '하' in x:
+                    return '-' + x.split()[-1].replace(',', '')
+                else:
+                    # 숫자만 남겨두고 제거
+                    return re.sub(r'[^\d+-]', '', x)
+            return x
+
+        df['전일비'] = df['전일비'].apply(convert_전일비)
+
         df['종가'] = df['종가'].astype('float')
         df['전일비'] = df['전일비'].astype('float')
         df['거래량'] = df['거래량'].astype('float')
@@ -99,9 +116,9 @@ def get_종목별_일별_거래량(code, max_page=3):
         df['등락률'] = percent_to_float(df['등락률'])
         df['외국인 - 보유율(%)'] = percent_to_float(df['외국인 - 보유율(%)'])
         df['기관 - 순매매량'] = df['기관 - 순매매량'].apply(
-            lambda s: float(s.replace(',', '')))
+            lambda s: float(str(s).replace(',', '')))
         df['외국인 - 순매매량'] = df['외국인 - 순매매량'].apply(
-            lambda s: float(s.replace(',', '')))
+            lambda s: float(str(s).replace(',', '')))
 
         yield df
 
